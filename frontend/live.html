@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Camera — Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Capture timer card ── */
+    .capture-timer {
+      max-width: 640px;
+      margin: 0 auto 1.2rem;
+      border-left: 4px solid var(--primary);
+      background: var(--card-bg);
+    }
+    .timer-title { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.25rem; }
+    .timer-value { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+    .timer-sub   { margin-top: 0.35rem; color: var(--text-muted); font-size: 0.85rem; }
+
+    /* ── Live feed container (hidden until button pressed) ── */
+    .live-wrapper {
+      max-width: 640px;
+      margin: 0 auto;
+      display: none;           /* hidden by default */
+    }
+    .live-wrapper.visible { display: block; }
+
+    .live-frame {
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+      background: #000;
+      padding: 0;
+    }
+    .live-frame img { width: 100%; display: block; }
+
+    /* ── Button row ── */
+    .live-controls {
+      max-width: 640px;
+      margin: 0 auto 1.2rem;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    #btnStartLive  { min-width: 160px; }
+    #btnStopLive   { min-width: 160px; }
+
+    /* live indicator dot */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--success, #16a34a);
+      margin-left: auto;
+      align-self: center;
+    }
+    .live-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--success, #16a34a);
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Admin Dashboard</div>
+    <ul>
+      <li><a href="admindashboard.html">Dashboard</a></li>
+      <li><a href="addfaculty.html">Add Faculty</a></li>
+      <li><a href="adminclassview.html">View Classes</a></li>
+      <li><a href="edittimetable.html">Edit Timetable</a></li>
+      <li><a href="systemstatus.html">System Status</a></li>
+      <li class="active"><a href="live.html">Live</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h3>Anti-Proxy Attendance System</h3>
+      <div class="profile">
+        <span class="role">ADMIN</span>
+        <span class="name">{{ session.name }}</span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>Live Camera Monitor</h1>
+        <p>Real-time classroom feed with face recognition. Press the button below to start streaming.</p>
+      </div>
+
+      <!-- Next capture countdown -->
+      <div class="card capture-timer">
+        <div class="timer-title">Next automatic attendance capture</div>
+        <div id="nextCapture" class="timer-value">Calculating...</div>
+        <div id="nextCaptureSub" class="timer-sub">Using configured class periods</div>
+      </div>
+
+      <!-- Controls -->
+      <div class="live-controls">
+        <button id="btnStartLive" class="btn btn-primary" onclick="startLive()">
+          ▶ Start Live View
+        </button>
+        <button id="btnStopLive" class="btn btn-outline" onclick="stopLive()">
+          ■ Stop Live View
+        </button>
+        <span id="liveBadge" class="live-badge" style="display:none;">
+          <span class="live-dot"></span> LIVE
+        </span>
+      </div>
+
+      <!-- Feed (shown only after button press) -->
+      <div id="liveWrapper" class="live-wrapper">
+        <div class="live-frame card">
+          <img id="liveFeedImg" src="" alt="Live camera feed">
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ── Live feed toggle ── */
+function startLive() {
+  const img     = document.getElementById("liveFeedImg");
+  const wrapper = document.getElementById("liveWrapper");
+  const btnOn   = document.getElementById("btnStartLive");
+  const btnOff  = document.getElementById("btnStopLive");
+  const badge   = document.getElementById("liveBadge");
+
+  img.src       = "/api/admin/live_feed?" + Date.now(); // cache-bust
+  wrapper.classList.add("visible");
+  btnOn.style.display         = "none";
+  btnOff.style.display        = "inline-block";
+  badge.style.display         = "inline-flex";
+}
+
+function stopLive() {
+  const img     = document.getElementById("liveFeedImg");
+  const wrapper = document.getElementById("liveWrapper");
+  const btnOn   = document.getElementById("btnStartLive");
+  const btnOff  = document.getElementById("btnStopLive");
+  const badge   = document.getElementById("liveBadge");
+
+  img.src = "";                           // disconnect the MJPEG stream
+  wrapper.classList.remove("visible");
+  btnOn.style.display         = "inline-block";
+  btnOff.style.display        = "none";
+  badge.style.display         = "none";
+}
+
+/* ── Capture countdown timer ── */
+const periods = [
+  { start: "09:00", end: "10:00" },
+  { start: "10:05", end: "11:05" },
+  { start: "11:15", end: "12:15" },
+  { start: "13:15", end: "14:15" },
+  { start: "14:20", end: "15:20" },
+  { start: "15:30", end: "16:30" }
+];
+
+function toDateToday(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function formatCountdown(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(total / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+  const ss = String(total % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function getNextCaptureWindow(now) {
+  const windows = [];
+  periods.forEach((p, index) => {
+    const start       = toDateToday(p.start);
+    const end         = toDateToday(p.end);
+    const startCapture = new Date(start.getTime() + 10 * 60 * 1000);
+    const endCapture   = new Date(end.getTime()   -  5 * 60 * 1000);
+    windows.push({ period: index + 1, type: "start", at: startCapture });
+    windows.push({ period: index + 1, type: "end",   at: endCapture   });
+  });
+  for (const w of windows) { if (w.at > now) return w; }
+  return null;
+}
+
+function updateCaptureTimer() {
+  const title = document.getElementById("nextCapture");
+  const sub   = document.getElementById("nextCaptureSub");
+  const now   = new Date();
+  const next  = getNextCaptureWindow(now);
+  if (!next) {
+    title.textContent = "No more capture windows today";
+    sub.textContent   = "Automatic capture resumes with tomorrow's timetable";
+    return;
+  }
+  title.textContent = `${formatCountdown(next.at.getTime() - now.getTime())} remaining`;
+  sub.textContent   = `Period ${next.period} ${next.type} capture at ${next.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+updateCaptureTimer();
+setInterval(updateCaptureTimer, 1000);
+</script>
+</body>
+</html>
