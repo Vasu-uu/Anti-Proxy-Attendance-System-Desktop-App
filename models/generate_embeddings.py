@@ -7,15 +7,9 @@ import numpy as np
 import mysql.connector
 from models.embedding_model import get_face_embedding
 
-DATASET_DIR = "datasets"
+from db_config import get_db_connection
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="Attandance" 
-    )
+DATASET_DIR = "datasets"
 
 conn = get_db_connection()
 cursor = conn.cursor()

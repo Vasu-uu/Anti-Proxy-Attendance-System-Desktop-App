@@ -3,10 +3,12 @@ from ultralytics import YOLO
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Use either face model OR official model
-MODEL_PATH = os.path.join(BASE_DIR, "saved_models", "yolov8n-face.pt")
-# If you want official fallback, comment above & use:
-# model = YOLO("yolov8n.pt")
+# Prefer the custom face model; fall back to the standard YOLOv8n if not found.
+_FACE_MODEL_PATH = os.path.join(BASE_DIR, "saved_models", "yolov8n-face.pt")
+if os.path.exists(_FACE_MODEL_PATH):
+    MODEL_PATH = _FACE_MODEL_PATH
+else:
+    MODEL_PATH = "yolov8n.pt"   # ultralytics auto-downloads this on first run
 
 model = YOLO(MODEL_PATH)
 

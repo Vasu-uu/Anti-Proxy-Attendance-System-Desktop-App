@@ -29,15 +29,53 @@ Results are written directly to a MySQL database and are immediately accessible 
 
 ## Features
 
-- 🤖 **AI Face Recognition** — YOLOv8 face detection + FaceNet (512-D) embeddings for accurate student identification
-- 📷 **Live Camera Feed** — Iriun Webcam integration for real-time stream and attendance capture
-- ⏰ **Automated Period Scheduling** — Configurable period timetable; attendance sessions trigger automatically by period
-- 🗄️ **MySQL-backed Attendance** — Per-period attendance (up to 9 periods/day) stored per student per date
-- 🩺 **Camera Health Logging** — Automatic logging of camera status per period for audit trails
-- 🖥️ **Three-Role Web Portal** — Separate dashboards for Students, Faculty, and Admins
-- 📊 **Attendance Analytics** — Charts, CSV export, per-subject breakdowns, and class-level summaries
-- 🔒 **Session-based Auth** — Role-based login with session management
-- 📤 **Offline Photo Upload** — Faculty can upload class photos for offline/manual attendance marking
+1. **AI Face Recognition:** Uses YOLOv8 for face detection and FaceNet (via `keras-facenet`) for deep 512-D embeddings.
+2. **Offline Mode:** Captures images via smartphone or USB camera, which can later be uploaded and processed by the desktop client.
+3. **Desktop Interface:** A fast, responsive, and beautiful desktop GUI built with `CustomTkinter`.
+4. **Three-Tier Portals:** Distinct dashboards for Students, Faculty, and Admins.
+5. **Real-time Camera Checking:** Checks camera health and system status to maintain an audit trail.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- MySQL Server (Ensure database is created via `database/schema.sql`)
+- NVIDIA GPU with CUDA recommended for fast embedding generation (but runs fine on CPU)
+
+### Installation
+
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Create the `Attandance` database in MySQL and import `database/schema.sql`.
+4. Create a `db_config.py` file in the project root with your MySQL credentials (see below).
+5. Run the desktop application:
+   ```bash
+   python app.py
+   ```
+
+### Database Configuration (`db_config.py`)
+Create a file named `db_config.py` in the project root with the following contents:
+```python
+import mysql.connector
+
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "your_password",
+    "database": "Attandance"
+}
+
+def get_db_connection():
+    return mysql.connector.connect(**DB_CONFIG)
+```
+
+---
 - ✏️ **Manual Override** — Admin can edit timetables, attendance records, and manage faculty
 
 
@@ -88,7 +126,7 @@ Results are written directly to a MySQL database and are immediately accessible 
 | Deep Learning | PyTorch, TensorFlow, torchvision        |
 | Computer Vision | OpenCV (`opencv-python`), NumPy       |
 | Database      | MySQL (`mysql-connector-python`)        |
-| Frontend      | HTML5, CSS3, Vanilla JavaScript         |
+| Frontend      | CustomTkinter                           |
 | Camera        | Iriun Webcam                            |
 
 ---
@@ -98,8 +136,10 @@ Results are written directly to a MySQL database and are immediately accessible 
 ```
 Anti-Proxy-Attendance-System/
 │
+├── db_config.py                 # Central database configuration
+├── gui_app.py                   # CustomTkinter GUI & client logic
+├── app.py                       # Application entry point (GUI + Local API backend)
 ├── main.py                      # Core scheduler & capture pipeline
-├── app.py                       # Flask web application & REST APIs
 ├── attendance_service.py        # Attendance business logic (MySQL)
 ├── migrate_embeddings.py        # Migrate embeddings → MySQL
 ├── resolve_conflicts.py         # Data/merge conflict resolution helper
@@ -125,18 +165,6 @@ Anti-Proxy-Attendance-System/
 │
 ├── saved_models/
 │   └── yolov8n-face.pt          # YOLOv8 face detection model weights
-│
-├── frontend/
-│   ├── style.css
-│   ├── login.html
-│   ├── navigation.js
-│   ├── studentdashboard.html / .js
-│   ├── student.html / student_timetable.html / studentattendance.html
-│   ├── facultydashboard.html / facultytimetable.html / faculty.html
-│   ├── admindashboard.html / addfaculty.html / adminclassview.html
-│   ├── edittimetable.html / systemstatus.html
-│   ├── live.html / capture.html / viewattendance.html
-│   └── login img.jpg
 ```
 
 ---
@@ -228,10 +256,15 @@ Raw Video Frame
 Designed the overall system architecture, defining how all components interact end-to-end. Developed and integrated the AI pipeline including model selection, training configuration, and runtime inference.
 
 **Key files:**
-- `main.py` — End-to-end capture pipeline: period scheduling, Iriun Webcam I/O, attendance sessions, face matching loop, GPU cleanup
-- `models/embedding_model.py` — FaceNet-style 512-D face embedding extraction
-- `models/similarity.py` — Cosine similarity scoring between embeddings for recognition
-- `models/generate_embeddings.py` — Batch embedding generation from image data with database persistence
+- `run_gui.py` — The Desktop Application entry point.
+- `gui_app.py` — The unified CustomTkinter desktop interface and client logic.
+- `app.py` — The local API backend, serving data and processing requests from the desktop UI.
+- `main.py` — End-to-end capture pipeline: period scheduling, Iriun Webcam I/O, attendance sessions, face matching loop, GPU cleanup.
+
+> **Note:** The `old/` directory contains the legacy web-based frontend and server code for reference.
+
+### `models/`
+Contains the AI logic for extracting embeddings and comparing faces.rom image data with database persistence
 - `detection/face_detector.py` — YOLOv8-based face localization feeding crops into the embedding pipeline
 
 ---

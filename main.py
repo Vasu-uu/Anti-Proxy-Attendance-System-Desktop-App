@@ -10,14 +10,7 @@ from models.similarity import cosine_similarity
 import mysql.connector
 from attendance_service import AttendanceService
 
-# DB CONNECTION
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",    #mysqlpasswordhere
-        database="Attandance"
-    )
+from db_config import get_db_connection
 
 # DB EMBEDDING LOADER
 

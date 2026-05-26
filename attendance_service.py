@@ -2,14 +2,7 @@ import datetime
 import mysql.connector
 
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="Attandance"
-    )
-
+from db_config import get_db_connection
 
 class AttendanceService:
     def __init__(self):
