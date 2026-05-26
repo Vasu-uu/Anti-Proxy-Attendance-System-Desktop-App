@@ -15,7 +15,6 @@
 - [Running the Application](#running-the-application)
 - [Roles & Portals](#roles--portals)
 - [AI Pipeline](#ai-pipeline)
-- [Team & Contributions](#team--contributions)
 
 ---
 
